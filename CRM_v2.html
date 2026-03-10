@@ -490,7 +490,7 @@ function sheetsNaarCompanies(contactRows, ixRows){
   // Groepeer contactrijen per bedrijf
   const bedrijfMap = {};
   for(const r of contactRows){
-    const bid = 'b_'+r[1].toLowerCase().replace(/[^a-z0-9]/g,'_').slice(0,20)+'_'+(Math.abs(r[1].split('').reduce((a,c)=>a+c.charCodeAt(0),0))%10000);
+    const bid = 'b_'+r[1].toLowerCase().replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
     if(!bedrijfMap[bid]){
       bedrijfMap[bid]={
         id:bid, naam:r[1], soort:r[3], abcd:r[10]||'C',
