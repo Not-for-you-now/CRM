@@ -345,6 +345,12 @@ select:focus{border-color:var(--acc)}
 
 <div id="body">
 
+  <!-- LAAD OVERLAY -->
+  <div id="init-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+    <div style="font-size:28px;animation:spin 1.2s linear infinite">◎</div>
+    <div style="font-size:11px;color:var(--t3);letter-spacing:2px;text-transform:uppercase">laden...</div>
+  </div>
+
   <!-- DASHBOARD -->
   <div id="dv">
     <div id="d-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;gap:12px;color:var(--t3)">
@@ -516,7 +522,7 @@ let tok=null, tokExp=0;
 // ── HELPERS ──────────────────────────────────────────────────────────────
 const td   = ()=>new Date().toISOString().slice(0,10);
 const ad   = n=>new Date(Date.now()+n*864e5).toISOString().slice(0,10);
-const ds   = d=>{if(!d)return null;try{return Math.floor((Date.now()-new Date(d))/864e5)}catch{return null}};
+const ds   = d=>{if(!d||d===''||d==='0')return null;try{const n=Math.floor((Date.now()-new Date(d))/864e5);return(isNaN(n)||n<0||n>36500)?null:n;}catch{return null}};
 const lcL  = d=>{if(!d||d==='')return '';const n=ds(d);return n===null?'':n===0?'vandaag':n===1?'gisteren':n+'d geleden'};
 const lcC  = d=>{if(!d||d==='')return 'var(--t3)';const n=ds(d);return n===null?'var(--t3)':n<3?'var(--acc)':n<14?'var(--t2)':n<42?'var(--yel)':'var(--red)'};
 const sCol = s=>SCAT[s]||'var(--t3)';
@@ -618,11 +624,15 @@ async function init(){
     }
     const nu=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
     const ll=document.getElementById('last-load');if(ll)ll.textContent=nu;
-    // Altijd dashboard loader verbergen en content tonen na laden
+    // Verberg laadoverlay en activeer dashboard
+    const overlay=document.getElementById('init-overlay');
+    if(overlay)overlay.style.display='none';
     const dloader=document.getElementById('d-loading');
     const dcontent=document.getElementById('d-content');
     if(dloader)dloader.style.display='none';
     if(dcontent){dcontent.style.display='flex';dcontent.style.flexDirection='column';dcontent.style.gap='16px';}
+    // Zet actieve tab op dashboard (ook op mobiel)
+    setTab('d');
     setSS('ok','⬤ live');
   }catch(e){
     setSS('err','⬤ offline');
@@ -1391,7 +1401,7 @@ function rDash(){
   // Vandaag — terugbellen
   const tbItems=actief.filter(c=>c.personen.some(p=>p.interacties.some(i=>i.datum&&i.datum.startsWith(t)&&/terugbel/i.test(i.note||''))));
   document.getElementById('dvd').innerHTML=tbItems.length
-    ?tbItems.slice(0,6).map(c=>`<div class="vd-item" onclick="setTab('c');sel('${c.id}')">
+    ?tbItems.slice(0,6).map(c=>`<div class="vd-item" onclick="setTab('c');rl();setTimeout(()=>{sel('${c.id}',true);},80)">
       <div class="vd-icon">📅</div>
       <div><div class="vd-naam">${esc(c.naam)}</div><div class="vd-sub">${esc(c.soort||'')} · ${c.abcd}</div></div>
     </div>`).join('')
@@ -1401,7 +1411,7 @@ function rDash(){
   const att=actief.filter(c=>(c.abcd==='A'||c.abcd==='B')&&c.status==='Opvolgen'&&(ds(c.laatste_contact)||0)>14)
     .sort((a,b)=>(ds(b.laatste_contact)||0)-(ds(a.laatste_contact)||0)).slice(0,6);
   document.getElementById('dan').innerHTML=att.length
-    ?att.map(c=>`<div class="att-item" onclick="setTab('c');sel('${c.id}')">
+    ?att.map(c=>`<div class="att-item" onclick="setTab('c');rl();setTimeout(()=>{sel('${c.id}',true);},80)">
       <div class="att-ago" style="color:var(--red)">${lcL(c.laatste_contact).replace(' geleden','')}</div>
       <div><div class="att-naam">${esc(c.naam)}</div><div class="att-sub">${c.abcd} · ${esc(c.soort||'')}</div></div>
     </div>`).join('')
@@ -1515,7 +1525,7 @@ async function hardRefresh(){
     const nu2=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
     const ll2=document.getElementById('last-load');if(ll2)ll2.textContent=nu2;
     setSS('ok','⬤ live');
-    if(curTab==='d')rDash();
+    rDash();
     if(curTab==='c')rl();
     if(curTab==='a')renderAc();
     if(curTab==='k')renderK();
