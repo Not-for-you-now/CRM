@@ -584,10 +584,10 @@ function sheetsNaarCompanies(contactRows,ixRows){
   for(const c of companies){
     for(const p of c.personen){
       p.interacties=(ixByPersoon[p.id]||[]).sort((a,b)=>(a.datum||'').localeCompare(b.datum||''));
-      if(p.interacties.length&&!p.laatste_contact)p.laatste_contact=p.interacties[p.interacties.length-1].datum?.slice(0,10)||'';
+      if(p.interacties.length&&!p.laatste_contact){const ld=p.interacties[p.interacties.length-1].datum||'';p.laatste_contact=/^\d{4}-\d{2}-\d{2}/.test(ld)?ld.slice(0,10):''}
     }
     c.status=c.personen.reduce((best,p)=>sRank[p.status]<sRank[best]?p.status:best,c.personen[0]?.status||'Nieuw');
-    const lcs=c.personen.map(p=>p.laatste_contact).filter(Boolean);
+    const lcs=c.personen.map(p=>p.laatste_contact).filter(d=>d&&/^\d{4}-\d{2}-\d{2}/.test(d));
     c.laatste_contact=lcs.length?lcs.sort().reverse()[0]:'';
     c.totaal_ix=c.personen.reduce((s,p)=>s+p.interacties.length,0);
   }
@@ -1022,7 +1022,7 @@ async function logIx(bid,pid,datum,note,herinnering){
   try{await shApp('Interacties!A:E',[[bid,pid,datum,note,herinnering||'']])}catch(e){console.warn('Log fout:',e)}
   const c=getC(bid),p=getP(c,pid);
   if(p){p.interacties.push({datum,note,herinnering:herinnering||''});p.laatste_contact=datum.slice(0,10)}
-  if(c){const lcs=c.personen.map(ps=>ps.laatste_contact).filter(Boolean);c.laatste_contact=lcs.length?lcs.sort().reverse()[0]:'';c.totaal_ix=c.personen.reduce((s,ps)=>s+ps.interacties.length,0)}
+  if(c){const lcs=c.personen.map(ps=>ps.laatste_contact).filter(d=>d&&/^\d{4}-\d{2}-\d{2}/.test(d));c.laatste_contact=lcs.length?lcs.sort().reverse()[0]:'';c.totaal_ix=c.personen.reduce((s,ps)=>s+ps.interacties.length,0)}
   refreshViews(bid);if(selId===bid)rDet(bid);
 }
 
@@ -1408,7 +1408,7 @@ function rDash(){
     :'<div class="empty-msg">geen terugbelafspraken vandaag</div>';
 
   // Aandacht nodig
-  const att=actief.filter(c=>(c.abcd==='A'||c.abcd==='B')&&c.status==='Opvolgen'&&(ds(c.laatste_contact)||0)>14)
+  const att=actief.filter(c=>(c.abcd==='A'||c.abcd==='B')&&c.status==='Opvolgen'&&c.laatste_contact&&/^\d{4}-\d{2}-\d{2}/.test(c.laatste_contact)&&(ds(c.laatste_contact)||0)>14)
     .sort((a,b)=>(ds(b.laatste_contact)||0)-(ds(a.laatste_contact)||0)).slice(0,6);
   document.getElementById('dan').innerHTML=att.length
     ?att.map(c=>`<div class="att-item" onclick="setTab('c');rl();setTimeout(()=>{sel('${c.id}',true);},80)">
