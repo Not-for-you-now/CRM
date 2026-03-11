@@ -7,17 +7,17 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#0d0d0d; --bg1:#111111; --bg2:#191919; --bg3:#222222;
-  --b:#252525; --b2:#333333; --b3:#444444;
-  --t:#f0f0f0; --t2:#999; --t3:#555;
-  --acc:#00d4aa; --acc2:#00a882; --acc3:rgba(0,212,170,.1);
-  --red:#ff4d4d; --ora:#ff8c00; --yel:#ffd700; --blu:#4d9fff;
-  --fa:#00d4aa; --fb:#4d9fff; --fc:#ffd700; --fd:#555;
-  --f0:#666; --f1:#4d9fff; --f2:#ff8c00; --f3:#00d4aa; --f4:#333;
+  --bg:#f5f0e8; --bg1:#ede8de; --bg2:#e4ddd0; --bg3:#d9d1c2;
+  --b:#c8bfae; --b2:#b5aa97; --b3:#9e9080;
+  --t:#1a1510; --t2:#4a4035; --t3:#8a7a65;
+  --acc:#2d7a5f; --acc2:#1f5e47; --acc3:rgba(45,122,95,.1);
+  --red:#c0392b; --ora:#d4700a; --yel:#b8860b; --blu:#2060a0;
+  --fa:#2d7a5f; --fb:#2060a0; --fc:#b8860b; --fd:#8a7a65;
+  --f0:#8a7a65; --f1:#2060a0; --f2:#d4700a; --f3:#2d7a5f; --f4:#c8bfae;
   --radius:4px;
-  --cat-hh:#7c6ff7; --cat-be:#4d9fff; --cat-pr:#ff6b9d;
-  --cat-re:#00d4aa; --cat-pe:#ff8c00; --cat-jo:#888;
-  --cat-in:#ffd700; --cat-mb:#e879f9; --cat-xx:#555;
+  --cat-hh:#6b4fcc; --cat-be:#2060a0; --cat-pr:#b03060;
+  --cat-re:#2d7a5f; --cat-pe:#d4700a; --cat-jo:#7a7060;
+  --cat-in:#b8860b; --cat-mb:#9b30a0; --cat-xx:#8a7a65;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
@@ -25,7 +25,7 @@ body{font-family:'IBM Plex Mono',monospace;background:var(--bg);color:var(--t);f
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+::-webkit-scrollbar-thumb{background:var(--b3);border-radius:2px}
 ::-webkit-scrollbar-thumb:hover{background:var(--b3)}
 
 /* ── TOPBAR ── */
@@ -109,7 +109,7 @@ body{font-family:'IBM Plex Mono',monospace;background:var(--bg);color:var(--t);f
 /* ══════════════════════════════════════════
    LEFT PANEL — BEDRIJVENLIJST
 ══════════════════════════════════════════ */
-#lp{width:320px;min-width:320px;border-right:1px solid var(--b);display:flex;flex-direction:column;background:var(--bg1);overflow:hidden;transition:width .2s}
+#lp{width:380px;min-width:380px;border-right:1px solid var(--b);display:flex;flex-direction:column;background:var(--bg1);overflow:hidden;transition:width .2s}
 #fb{padding:10px;border-bottom:1px solid var(--b);display:flex;flex-direction:column;gap:7px;flex-shrink:0}
 #sw{position:relative}
 #sq{width:100%;background:var(--bg2);border:1px solid var(--b2);color:var(--t);padding:7px 28px 7px 10px;border-radius:var(--radius);font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;transition:border-color .15s}
@@ -1006,7 +1006,7 @@ async function logIx(bid,pid,datum,note,herinnering){
   const c=getC(bid),p=getP(c,pid);
   if(p){p.interacties.push({datum,note,herinnering:herinnering||''});p.laatste_contact=datum.slice(0,10)}
   if(c){const lcs=c.personen.map(ps=>ps.laatste_contact).filter(Boolean);c.laatste_contact=lcs.length?lcs.sort().reverse()[0]:'';c.totaal_ix=c.personen.reduce((s,ps)=>s+ps.interacties.length,0)}
-  updRow(bid);rDash();if(selId===bid)rDet(bid);
+  refreshViews(bid);if(selId===bid)rDet(bid);
 }
 
 function updRow(bid){const el=document.getElementById('row-'+bid),c=getC(bid);if(el&&c)el.outerHTML=browH(c)}
@@ -1014,13 +1014,13 @@ function updRow(bid){const el=document.getElementById('row-'+bid),c=getC(bid);if
 async function setAbcd(bid,abcd){
   const c=getC(bid);if(!c)return;c.abcd=abcd;
   try{const d=await shGet('Contacten!A:A');for(const p of c.personen){const ri=(d.values||[]).findIndex(r=>r[0]===p.id);if(ri>0)await shPut(`Contacten!K${ri+1}`,[[abcd]])}}catch(e){console.warn(e)}
-  updRow(bid);rDash();if(selId===bid)rDet(bid);toast(`${c.naam} → ${abcd}`);
+  refreshViews(bid);if(selId===bid)rDet(bid);toast(`${c.naam} → ${abcd}`);
 }
 
 async function setBedrijfSt(bid,status){
   const c=getC(bid);if(!c)return;c.status=status;c.personen.forEach(p=>p.status=status);
   try{const d=await shGet('Contacten!A:A');for(const p of c.personen){const ri=(d.values||[]).findIndex(r=>r[0]===p.id);if(ri>0)await shPut(`Contacten!H${ri+1}`,[[status]])}}catch(e){console.warn(e)}
-  updRow(bid);rDash();if(selId===bid)rDet(bid);
+  refreshViews(bid);if(selId===bid)rDet(bid);
 }
 
 async function setPSt(bid,pid,status){
@@ -1029,7 +1029,7 @@ async function setPSt(bid,pid,status){
   c.status=c.personen.reduce((best,ps)=>sRank[ps.status]<sRank[best]?ps.status:best,c.personen[0]?.status||'Nieuw');
   try{const d=await shGet('Contacten!A:A');const ri=(d.values||[]).findIndex(r=>r[0]===pid);if(ri>0)await shPut(`Contacten!H${ri+1}`,[[status]])}catch(e){console.warn(e)}
   if(status==='Done - later opvolgen')await logIx(bid,pid,td(),'Status → Done — herinnering 6 weken',ad(42));
-  updRow(bid);rDash();if(selId===bid)rDet(bid);
+  refreshViews(bid);if(selId===bid)rDet(bid);
 }
 
 async function saveSoort(bid,soort){
@@ -1070,7 +1070,7 @@ async function addA(bid,pid){
   const dl=document.getElementById('nad')?.value||'',nid=Date.now().toString();
   try{await shApp('Acties!A:G',[[nid,bid,pid||'',txt,dl,'0',td()]]);
   AC.push({id:nid,bedrijf_id:bid,persoon_id:pid||'',omschrijving:txt,deadline:dl,gedaan:false,aangemaakt:td()});
-  bBadges();document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan).length;
+  refreshViews(bid);
   document.getElementById('nat').value='';document.getElementById('nad').value='';
   rDet(bid);toast('Actie toegevoegd');}catch(e){toast('Fout: '+e.message)}
 }
@@ -1104,6 +1104,7 @@ async function toggleArchBedrijf(bid){
   toast(c.archief?`${c.naam} gearchiveerd`:`${c.naam} teruggezet`);
   selId=null;document.getElementById('de').style.display='';document.getElementById('dc').style.display='none';
   rl();rDash();
+  if(curTab==='a')renderAc();
 }
 
 // ── MODAL ─────────────────────────────────────────────────────────────────
@@ -1513,6 +1514,17 @@ async function hardRefresh(){
     toast('Herladen op '+nu2+' ✓');
   }catch(e){setSS('err','⬤ offline');toast('Laden mislukt: '+e.message);}
   if(btn){btn.textContent='↺ ververs';btn.disabled=false;}
+}
+
+function refreshViews(bid){
+  // Herlaad alle relevante views na een wijziging
+  if(bid)updRow(bid);
+  rDash();
+  if(curTab==='a')renderAc();
+  if(curTab==='k')renderK();
+  document.getElementById('bc').textContent=COMPANIES.filter(c=>!c.archief).length;
+  document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan).length;
+  document.getElementById('bk').textContent=COMPANIES.filter(c=>!c.soort).length;
 }
 
 // ── START ──────────────────────────────────────────────────────────────────
