@@ -517,8 +517,8 @@ let tok=null, tokExp=0;
 const td   = ()=>new Date().toISOString().slice(0,10);
 const ad   = n=>new Date(Date.now()+n*864e5).toISOString().slice(0,10);
 const ds   = d=>{if(!d)return null;try{return Math.floor((Date.now()-new Date(d))/864e5)}catch{return null}};
-const lcL  = d=>{const n=ds(d);return n===null?'—':n===0?'vandaag':n===1?'gisteren':n+'d geleden'};
-const lcC  = d=>{const n=ds(d);return n===null?'var(--t3)':n<3?'var(--acc)':n<14?'var(--t2)':n<42?'var(--yel)':'var(--red)'};
+const lcL  = d=>{if(!d||d==='')return '';const n=ds(d);return n===null?'':n===0?'vandaag':n===1?'gisteren':n+'d geleden'};
+const lcC  = d=>{if(!d||d==='')return 'var(--t3)';const n=ds(d);return n===null?'var(--t3)':n<3?'var(--acc)':n<14?'var(--t2)':n<42?'var(--yel)':'var(--red)'};
 const sCol = s=>SCAT[s]||'var(--t3)';
 const avL  = s=>((s||'?').trim().replace(/[^a-zA-Z0-9 ]/g,'').trim().slice(0,2)||'??').toUpperCase();
 const esc  = s=>(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -618,6 +618,11 @@ async function init(){
     }
     const nu=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
     const ll=document.getElementById('last-load');if(ll)ll.textContent=nu;
+    // Altijd dashboard loader verbergen en content tonen na laden
+    const dloader=document.getElementById('d-loading');
+    const dcontent=document.getElementById('d-content');
+    if(dloader)dloader.style.display='none';
+    if(dcontent){dcontent.style.display='flex';dcontent.style.flexDirection='column';dcontent.style.gap='16px';}
     setSS('ok','⬤ live');
   }catch(e){
     setSS('err','⬤ offline');
@@ -822,11 +827,13 @@ function rDet(bid){
   const p=getP(c,selPid)||c.personen[0];
 
   document.getElementById('dc').innerHTML=`
-    ${fromActies?`<div style="padding:0 0 12px 0">
-      <button onclick="fromActies=false;setTab('a')" style="background:none;border:none;color:var(--acc);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:0;display:flex;align-items:center;gap:5px">
-        ← terug naar acties
+    <div style="padding:0 0 14px 0;display:flex;align-items:center;gap:8px">
+      <button onclick="if(fromActies){fromActies=false;setTab('a')}else if(fromDash){fromDash=false;setTab('d')}else{selId=null;document.getElementById('de').style.display='';document.getElementById('dc').style.display='none';if(isMob()){document.getElementById('lp').classList.add('active');document.getElementById('dp').classList.remove('active');document.getElementById('back-btn').style.display='none';}updMobNav();}"
+        style="background:none;border:1px solid var(--b2);color:var(--t2);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 12px;border-radius:var(--radius);display:flex;align-items:center;gap:5px">
+        ← terug
       </button>
-    </div>`:''}
+      <span style="font-size:10px;color:var(--t3)">${fromActies?'naar acties':fromDash?'naar dashboard':'naar lijst'}</span>
+    </div>
     <div class="dh">
       <div class="dav" style="background:${col}">${avL(c.naam||p?.naam)}</div>
       <div style="flex:1;min-width:0">
@@ -1044,13 +1051,13 @@ async function saveBNotes(bid){
   const c=getC(bid);if(!c)return;const ss=document.getElementById('bns');
   c.notes=document.getElementById('bnotes')?.value||'';ss.textContent='...';ss.style.color='var(--t3)';
   try{const d=await shGet('Contacten!A:A');const ri=(d.values||[]).findIndex(r=>r[0]===(c.personen[0]?.id));if(ri>0)await shPut(`Contacten!L${ri+1}`,[[c.notes]]);
-  ss.textContent='✓';ss.style.color='var(--acc)';setTimeout(()=>ss.textContent='',2000);}catch(e){ss.textContent='✗';ss.style.color='var(--red)'}
+  ss.textContent='✓';ss.style.color='var(--acc)';setTimeout(()=>ss.textContent='',2000);rDet(bid);}catch(e){ss.textContent='✗';ss.style.color='var(--red)'}
 }
 
 async function savePNotes(bid,pid){
   const c=getC(bid),p=getP(c,pid);if(!c||!p)return;
   p.notes=document.getElementById(`pnotes-${pid}`)?.value||'';
-  try{const d=await shGet('Contacten!A:A');const ri=(d.values||[]).findIndex(r=>r[0]===pid);if(ri>0)await shPut(`Contacten!J${ri+1}`,[[p.notes]]);toast('Notitie opgeslagen')}catch(e){toast('Fout: '+e.message)}
+  try{const d=await shGet('Contacten!A:A');const ri=(d.values||[]).findIndex(r=>r[0]===pid);if(ri>0)await shPut(`Contacten!J${ri+1}`,[[p.notes]]);toast('Notitie opgeslagen');rDet(bid);}catch(e){toast('Fout: '+e.message)}
 }
 
 async function savePGeg(bid,pid){
