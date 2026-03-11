@@ -22,6 +22,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
 body{font-family:'IBM Plex Mono',monospace;background:var(--bg);color:var(--t);font-size:12px;display:flex;flex-direction:column}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
@@ -344,25 +345,19 @@ select:focus{border-color:var(--acc)}
 
   <!-- DASHBOARD -->
   <div id="dv">
-    <div class="d-grid-top" id="dtop"></div>
-    <div class="d-grid-mid">
-      <div class="d-card">
-        <div class="d-card-title">A/B/C/D prioriteit</div>
-        <div id="dabcd"></div>
-      </div>
-      <div class="d-card">
-        <div class="d-card-title">pipeline fases</div>
-        <div id="dpipe"></div>
-        <div style="margin-top:14px" class="d-card-title">categorieën</div>
-        <div id="dsoort"></div>
-      </div>
-      <div class="d-card">
-        <div class="d-card-title">vandaag <span style="color:var(--t3);font-size:8px">terugbellen</span></div>
-        <div id="dvd"></div>
-        <div style="margin-top:14px" class="d-card-title">aandacht nodig <span style="color:var(--t3);font-size:8px">A/B lang niet benaderd</span></div>
-        <div id="dan"></div>
+    <div id="d-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;gap:12px;color:var(--t3)">
+      <div style="font-size:24px;animation:spin 1.5s linear infinite">◎</div>
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase">data laden...</div>
+    </div>
+    <div id="d-content" style="display:none;flex-direction:column;gap:16px">
+      <div class="d-grid-top" id="dtop"></div>
+      <div class="d-grid-mid">
+        <div class="d-card"><div class="d-card-title">A/B/C/D prioriteit</div><div id="dabcd"></div></div>
+        <div class="d-card"><div class="d-card-title">pipeline fases</div><div id="dpipe"></div><div style="margin-top:14px" class="d-card-title">categorieën</div><div id="dsoort"></div></div>
+        <div class="d-card"><div class="d-card-title">vandaag <span style="color:var(--t3);font-size:8px">terugbellen</span></div><div id="dvd"></div><div style="margin-top:14px" class="d-card-title">aandacht nodig <span style="color:var(--t3);font-size:8px">A/B lang niet benaderd</span></div><div id="dan"></div></div>
       </div>
     </div>
+
   </div>
 
   <!-- BEDRIJVEN: LEFT + DETAIL -->
@@ -1279,6 +1274,20 @@ async function bulkAssign(){
 
 // ── DASHBOARD ──────────────────────────────────────────────────────────────
 function rDash(){
+  if(!COMPANIES.length){
+    // Data nog niet geladen — toon loader
+    const loader=document.getElementById('d-loading');
+    const content=document.getElementById('d-content');
+    if(loader)loader.style.display='flex';
+    if(content)content.style.display='none';
+    return;
+  }
+  // Toon content, verberg loader
+  const loader=document.getElementById('d-loading');
+  const content=document.getElementById('d-content');
+  if(loader)loader.style.display='none';
+  if(content){content.style.display='flex';content.style.flexDirection='column';content.style.gap='16px';}
+
   const t=td(),wk7=ad(-7);
   const actief=COMPANIES.filter(c=>!c.archief);
   const tot=actief.length||1;
