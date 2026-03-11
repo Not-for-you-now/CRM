@@ -280,31 +280,45 @@ select:focus{border-color:var(--acc)}
 /* ══════════════════════════════════════════
    TOAST
 ══════════════════════════════════════════ */
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--b2);color:var(--t);padding:9px 18px;border-radius:var(--radius);font-size:11px;z-index:200;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.mn-btn{background:none;border:none;color:var(--t3);font-family:'IBM Plex Mono',monospace;font-size:10px;padding:8px 12px;cursor:pointer;border-radius:var(--radius);transition:color .12s;letter-spacing:.5px}
+.mn-btn:hover,.mn-btn.on{color:var(--acc)}
+#toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--b2);color:var(--t);padding:9px 18px;border-radius:var(--radius);font-size:11px;z-index:200;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4)}
 #toast.show{opacity:1}
 
 /* ══════════════════════════════════════════
    MOBIEL
 ══════════════════════════════════════════ */
 @media(max-width:768px){
-  #tb{padding:0 10px}
+  html,body{height:100%;overflow:hidden}
+  #tb{padding:0 10px;flex-shrink:0}
   #logo{font-size:11px;letter-spacing:3px;margin-right:10px}
   .tab{padding:0 10px;font-size:9px}
   #tbdate{display:none}
-  #body{flex-direction:column;overflow:visible;height:auto}
-  
-  /* Mobiel: alles als full-screen views */
-  #dv,#av,#kv{overflow-y:visible;padding:14px}
-  #lp{width:100%!important;min-width:0;border-right:none;border-bottom:1px solid var(--b);max-height:none;flex:none}
-  #dp{width:100%;min-width:0;flex:none;overflow-y:visible}
+  #body{flex-direction:column;overflow:hidden;height:calc(100vh - 48px)}
+
+  /* Mobiel: elke view vult het scherm en scrollt zelf */
+  #dv{display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;flex-direction:column}
+  #dv.active{display:flex!important}
+  #av{display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;flex-direction:column}
+  #av.active{display:flex!important}
+  #kv{display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;flex-direction:column}
+  #kv.active{display:flex!important}
+
+  /* Bedrijvenlijst: links panel vult volledig */
+  #lp{display:none;width:100%!important;min-width:0;border-right:none;height:100%;overflow:hidden;flex-direction:column}
+  #lp.active{display:flex!important}
+  #cl{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1}
+  #mob-nav{display:flex!important}
+  #dv,#av,#kv,#dp{padding-bottom:60px}
+
+  /* Detail vult volledig */
+  #dp{display:none;width:100%;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch;height:100%}
+  #dp.active{display:block!important}
   #dc{padding:14px}
-  
+
   /* Mobiel navigatie */
-  body.view-detail #lp{display:none}
-  body.view-detail #dp{display:block}
-  body:not(.view-detail) #dp{display:none}
-  
-  #back-btn{display:flex!important}
+  #back-btn{display:flex!important;padding:12px 14px 0}
+
   .d-grid-top{grid-template-columns:1fr 1fr}
   .d-grid-mid{grid-template-columns:1fr}
   .ig{grid-template-columns:1fr}
@@ -436,6 +450,12 @@ select:focus{border-color:var(--acc)}
 </div></div>
 
 <div id="toast"></div>
+<div id="mob-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;height:50px;background:var(--bg1);border-top:1px solid var(--b);z-index:50;align-items:center;justify-content:space-around;padding:0 8px">
+  <button onclick="mobNav('d')" id="mn-d" class="mn-btn">⊞ Dashboard</button>
+  <button onclick="mobNav('c')" id="mn-c" class="mn-btn">◫ Bedrijven</button>
+  <button onclick="mobNav('a')" id="mn-a" class="mn-btn">✦ Acties</button>
+  <button onclick="mobBackBtn()" id="mn-back" class="mn-btn" style="color:var(--acc)">← terug</button>
+</div>
 
 <script>
 // ── CONFIG ───────────────────────────────────────────────────────────────
@@ -608,22 +628,42 @@ function populateSoortPills(){
 }
 
 // ── TABS ─────────────────────────────────────────────────────────────────
+function isMob(){return window.innerWidth<=768}
 function setTab(t){
   curTab=t;
   ['d','c','a','k'].forEach(x=>{const el=document.getElementById('tab-'+x);if(el)el.classList.toggle('on',x===t)});
-  document.getElementById('dv').style.display   =t==='d'?'flex':'none';
-  document.getElementById('dv').style.flexDirection=t==='d'?'column':'';
-  const lp=document.getElementById('lp'),dp=document.getElementById('dp');
-  lp.style.display=t==='c'?'flex':'none';
-  dp.style.display=t==='c'?'block':'none';
-  document.getElementById('av').style.display   =t==='a'?'flex':'none';
-  document.getElementById('av').style.flexDirection=t==='a'?'column':'';
-  document.getElementById('kv').style.display   =t==='k'?'flex':'none';
-  document.getElementById('kv').style.flexDirection=t==='k'?'column':'';
+  if(isMob()){
+    // Op mobiel: active class bepaalt zichtbaarheid
+    document.getElementById('dv').classList.toggle('active',t==='d');
+    document.getElementById('lp').classList.toggle('active',t==='c');
+    document.getElementById('dp').classList.toggle('active',t==='c'&&!!selId);
+    document.getElementById('av').classList.toggle('active',t==='a');
+    document.getElementById('kv').classList.toggle('active',t==='k');
+    // Verberg lp als detail open is
+    if(t==='c'&&selId){
+      document.getElementById('lp').classList.remove('active');
+      document.getElementById('dp').classList.add('active');
+    } else if(t==='c'){
+      document.getElementById('lp').classList.add('active');
+      document.getElementById('dp').classList.remove('active');
+    }
+  } else {
+    // Desktop: style display
+    document.getElementById('dv').style.display   =t==='d'?'flex':'none';
+    document.getElementById('dv').style.flexDirection=t==='d'?'column':'';
+    const lp=document.getElementById('lp'),dp=document.getElementById('dp');
+    lp.style.display=t==='c'?'flex':'none';
+    dp.style.display=t==='c'?'block':'none';
+    document.getElementById('av').style.display   =t==='a'?'flex':'none';
+    document.getElementById('av').style.flexDirection=t==='a'?'column':'';
+    document.getElementById('kv').style.display   =t==='k'?'flex':'none';
+    document.getElementById('kv').style.flexDirection=t==='k'?'column':'';
+  }
   if(t==='c'){rl();if(!selId){document.getElementById('de').style.display='';document.getElementById('dc').style.display='none'}}
   if(t==='a')renderAc();
   if(t==='k')renderK();
   if(t==='d')rDash();
+  updMobNav();
 }
 
 // ── FILTERS ───────────────────────────────────────────────────────────────
@@ -740,16 +780,23 @@ function sel(bid){
   document.getElementById('de').style.display='none';
   document.getElementById('dc').style.display='block';
   rDet(bid);
-  if(window.innerWidth<=768){
-    document.body.classList.add('view-detail');
+  if(isMob()){
+    document.getElementById('lp').classList.remove('active');
+    document.getElementById('dp').classList.add('active');
     document.getElementById('back-btn').style.display='flex';
+    document.getElementById('dp').scrollTop=0;
   }
+  updMobNav();
 }
 
 function mobileBack(){
-  document.body.classList.remove('view-detail');
-  document.getElementById('back-btn').style.display='none';
   selId=null;
+  document.getElementById('back-btn').style.display='none';
+  document.getElementById('de').style.display='';
+  document.getElementById('dc').style.display='none';
+  document.getElementById('lp').classList.add('active');
+  document.getElementById('dp').classList.remove('active');
+  updMobNav();
 }
 
 function rDet(bid){
@@ -1308,6 +1355,41 @@ function setSoortFilter(s){
 
 // ── TOAST ──────────────────────────────────────────────────────────────────
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3000)}
+
+function mobNav(t){
+  // Update actieve knop
+  ['d','c','a'].forEach(x=>{
+    const el=document.getElementById('mn-'+x);
+    if(el)el.classList.toggle('on',x===t);
+  });
+  setTab(t);
+}
+
+function mobBackBtn(){
+  if(curTab==='c'&&selId){
+    // In detail → terug naar lijst
+    mobileBack();
+  } else if(curTab!=='d'){
+    // Elke andere pagina → terug naar dashboard
+    mobNav('d');
+  } else {
+    // Al op dashboard → niets
+  }
+}
+
+function updMobNav(){
+  if(!isMob())return;
+  ['d','c','a'].forEach(x=>{
+    const el=document.getElementById('mn-'+x);
+    if(el)el.classList.toggle('on',x===curTab&&!(curTab==='c'&&selId));
+  });
+  const backBtn=document.getElementById('mn-back');
+  if(backBtn){
+    const showBack=(curTab==='c'&&selId)||(curTab!=='d');
+    backBtn.style.opacity=showBack?'1':'0.3';
+    backBtn.style.pointerEvents=showBack?'auto':'none';
+  }
+}
 
 // ── START ──────────────────────────────────────────────────────────────────
 init();
