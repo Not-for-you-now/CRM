@@ -1528,6 +1528,51 @@ function refreshViews(bid){
   document.getElementById('bk').textContent=COMPANIES.filter(c=>!c.soort).length;
 }
 
+let dActF='d';
+function setDactF(f){
+  dActF=f;
+  ['d','w','m'].forEach(x=>{const el=document.getElementById('dact-'+x);if(el)el.classList.toggle('on',x===f)});
+  rDashAct();
+}
+function rDashAct(){
+  const vanaf=dActF==='d'?td():dActF==='w'?ad(-7):ad(-30);
+  const ixInPeriod=[];
+  COMPANIES.filter(c=>!c.archief).forEach(c=>{
+    c.personen.forEach(p=>{
+      p.interacties.forEach(ix=>{
+        const d=(ix.datum||'').slice(0,10);
+        if(d>=vanaf){
+          const type=/niet bereikt|poging/i.test(ix.note||'')?'📵':/terugbel/i.test(ix.note||'')?'📅':/email|mail/i.test(ix.note||'')?'✉️':'📞';
+          ixInPeriod.push({datum:d,bedrijf:c.naam,bid:c.id,note:ix.note||'',type});
+        }
+      });
+    });
+  });
+  ixInPeriod.sort((a,b)=>b.datum.localeCompare(a.datum));
+  const el=document.getElementById('d-act');if(!el)return;
+  if(!ixInPeriod.length){el.innerHTML='<div class="empty-msg">geen activiteit in deze periode</div>';return;}
+  const kanalen={'📞':0,'✉️':0,'📅':0,'📵':0};
+  ixInPeriod.forEach(ix=>kanalen[ix.type]=(kanalen[ix.type]||0)+1);
+  const perDatum={};
+  ixInPeriod.forEach(ix=>{if(!perDatum[ix.datum])perDatum[ix.datum]=[];perDatum[ix.datum].push(ix)});
+  let h=`<div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+    ${Object.entries(kanalen).filter(([,v])=>v>0).map(([k,v])=>`<span style="font-size:11px;color:var(--t2)">${k} ${v}</span>`).join('')}
+    <span style="font-size:11px;color:var(--t3);margin-left:auto">${ixInPeriod.length} totaal</span>
+  </div>`;
+  Object.entries(perDatum).slice(0,14).forEach(([datum,items])=>{
+    h+=`<div style="margin-bottom:10px">
+      <div style="font-size:9px;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;padding-bottom:3px;border-bottom:1px solid var(--b)">${datum}</div>
+      ${items.slice(0,6).map(ix=>`<div style="display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer" onclick="setTab('c');setTimeout(()=>sel('${ix.bid}',true),50)">
+        <span style="font-size:12px;flex-shrink:0">${ix.type}</span>
+        <span style="font-size:11px;color:var(--acc);flex-shrink:0;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(ix.bedrijf)}</span>
+        <span style="font-size:10px;color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((ix.note||'').slice(0,50))}</span>
+      </div>`).join('')}
+      ${items.length>6?`<div style="font-size:9px;color:var(--t3)">+${items.length-6} meer</div>`:''}
+    </div>`;
+  });
+  el.innerHTML=h;
+}
+
 // ── START ──────────────────────────────────────────────────────────────────
 init();
 </script>
