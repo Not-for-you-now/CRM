@@ -516,7 +516,7 @@ const SCAT  = {
 let COMPANIES = [];
 let AC = [];
 let selId=null, selPid=null, curTab='d', fABCD='Alle', fSoort='Alle', afF='w';
-let mMode='', mBid=null, mPid=null, fromActies=false;
+let mMode='', mBid=null, mPid=null, fromActies=false, fromDash=false, FASE_FILTER='';
 let tok=null, tokExp=0;
 
 // ── HELPERS ──────────────────────────────────────────────────────────────
@@ -723,7 +723,7 @@ function clrQ(){document.getElementById('sq').value='';document.getElementById('
 function resetF(){
   document.getElementById('sq').value='';document.getElementById('sqx').style.display='none';
   document.getElementById('fsr').value='abcd';
-  fABCD='Alle';fSoort='Alle';
+  fABCD='Alle';fSoort='Alle';FASE_FILTER='';
   document.querySelectorAll('[data-a]').forEach(p=>{p.classList.toggle('on',p.dataset.a==='Alle');p.style.background=p.dataset.a==='Alle'?'var(--b2)':'';p.style.color=p.dataset.a==='Alle'?'var(--t2)':'';p.style.borderColor=p.dataset.a==='Alle'?'transparent':''});
   document.querySelectorAll('[data-s]').forEach(p=>{const on=p.dataset.s==='Alle';p.classList.toggle('on',on);p.style.background=on?'var(--b2)':'';p.style.color=on?'var(--t2)':sCol(p.dataset.s);p.style.borderColor=on?'transparent':sCol(p.dataset.s)+'66'});
   rl();
@@ -737,6 +737,7 @@ function getFiltered(){
   let L=COMPANIES.filter(c=>{
     if(!toonArchief&&c.archief)return false;
     if(toonArchief&&!c.archief)return false;
+    if(FASE_FILTER&&c.status!==FASE_FILTER)return false;
     if(fABCD!=='Alle'&&c.abcd!==fABCD)return false;
     if(fSoort!=='Alle'&&c.soort!==fSoort)return false;
     if(q){const hay=(c.naam+' '+c.soort+' '+c.personen.map(p=>p.naam+' '+p.email).join(' ')).toLowerCase();if(!hay.includes(q))return false}
@@ -1360,10 +1361,10 @@ function rDash(){
   const tbVandaag=actief.filter(c=>c.personen.some(p=>p.interacties.some(i=>i.datum&&i.datum.startsWith(t)&&/terugbel/i.test(i.note||'')))).length;
 
   document.getElementById('dtop').innerHTML=[
-    {n:tot,l:'bedrijven actief',sub:COMPANIES.filter(c=>c.archief).length+' gearchiveerd',cls:'acc',onclick:`setTab('c')`},
-    {n:opvolgen,l:'in opvolging',sub:'opvolgen + in afwachting',cls:'blu',onclick:`setTab('c');setFF('Opvolgen')`},
+    {n:tot,l:'bedrijven actief',sub:COMPANIES.filter(c=>c.archief).length+' gearchiveerd',cls:'acc',onclick:`resetF();setTab('c')`},
+    {n:opvolgen,l:'in opvolging',sub:'opvolgen + in afwachting',cls:'blu',onclick:`resetF();FASE_FILTER='Opvolgen';setTab('c')`},
     {n:openAc,l:'open acties',sub:'klik voor overzicht',cls:'yel',onclick:`setTab('a')`},
-    {n:wkIx,l:'contactmomenten',sub:'afgelopen 7 dagen',cls:'red',onclick:`setTab('c')`},
+    {n:wkIx,l:'contactmomenten',sub:'afgelopen 7 dagen',cls:'red',onclick:`resetF();setTab('c')`},
   ].map(s=>`<div class="d-stat ${s.cls}" onclick="${s.onclick}" style="cursor:pointer">
     <div class="d-stat-n" style="color:var(--${s.cls==='acc'?'acc':s.cls==='blu'?'blu':s.cls==='yel'?'yel':'red'})">${s.n}</div>
     <div class="d-stat-l">${s.l}</div>
