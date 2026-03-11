@@ -337,6 +337,8 @@ select:focus{border-color:var(--acc)}
   <div class="tab"    id="tab-k" onclick="setTab('k')">Opschonen <span class="tbadge" id="bk">—</span></div>
   <div id="tbr">
     <div id="tbdate"></div>
+    <div id="last-load" style="font-size:9px;color:var(--t3);white-space:nowrap"></div>
+    <button onclick="hardRefresh()" id="refresh-btn" style="background:none;border:1px solid var(--b2);color:var(--t3);padding:4px 9px;border-radius:var(--radius);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:10px">↺ ververs</button>
     <div id="sync" class="busy">⬤ laden</div>
   </div>
 </div>
@@ -363,6 +365,9 @@ select:focus{border-color:var(--acc)}
   <!-- BEDRIJVEN: LEFT + DETAIL -->
   <div id="lp" style="display:none">
     <div id="fb">
+      <button onclick="openM('nieuw',null,null)" style="width:100%;background:var(--acc);color:var(--bg);border:none;padding:9px;border-radius:var(--radius);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .12s" onmouseover="this.style.background='var(--acc2)'" onmouseout="this.style.background='var(--acc)'">
+        ＋ nieuw bedrijf / contact
+      </button>
       <div id="sw">
         <input id="sq" placeholder="zoek bedrijf of persoon..." oninput="onQ()">
         <span id="sqx" onclick="clrQ()">×</span>
@@ -391,7 +396,7 @@ select:focus{border-color:var(--acc)}
       </div>
     </div>
     <div id="cl"><div class="lm">LADEN...</div></div>
-    <button id="ncb2" onclick="openM('nieuw',null,null)">＋ nieuw bedrijf / contact</button>
+    
   </div>
 
   <div id="dp" style="display:none">
@@ -602,7 +607,17 @@ async function init(){
     document.getElementById('bc').textContent=COMPANIES.filter(c=>!c.archief).length;
     document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan).length;
     document.getElementById('bk').textContent=COMPANIES.filter(c=>!c.soort).length;
+    // Altijd dashboard tekenen na laden, ook als andere tab actief is
     rDash();
+    // Als dashboard tab actief is, zorg dat content zichtbaar is
+    if(curTab==='d'){
+      const loader=document.getElementById('d-loading');
+      const content=document.getElementById('d-content');
+      if(loader)loader.style.display='none';
+      if(content){content.style.display='flex';content.style.flexDirection='column';content.style.gap='16px';}
+    }
+    const nu=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+    const ll=document.getElementById('last-load');if(ll)ll.textContent=nu;
     setSS('ok','⬤ live');
   }catch(e){
     setSS('err','⬤ offline');
@@ -1109,9 +1124,22 @@ function openM(mode,bid,pid){
       <div class="mlbl">notitie</div>
       <textarea class="inp" id="mnote" rows="3" placeholder="Wat besproken? Volgende stap?" style="resize:vertical;width:100%;margin-bottom:12px"></textarea>
       <div class="mlbl" style="margin-bottom:7px">nieuwe fase persoon</div>
-      <div class="fg" id="mfg" data-sel="${p?.status||'Opvolgen'}">
+      <div class="fg" id="mfg" data-sel="${p?.status||'Opvolgen'}" style="margin-bottom:12px">
         ${FASES.map(f=>`<button class="fb" data-f="${f}" onclick="mSetF('${f}')"
           style="border-color:${FH[f]}66;background:${p?.status===f?FH[f]:'transparent'};color:${p?.status===f?fTxt(FH[f]):FH[f]}">${f}</button>`).join('')}
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--b);border-radius:var(--radius);padding:10px 12px">
+        <div class="mlbl" style="margin-bottom:7px">📅 opvolgen op datum (optioneel)</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input class="inp" type="date" id="mfol-dl" style="width:140px;color-scheme:dark">
+          <input class="inp" id="mfol-txt" placeholder="omschrijving actie..." style="flex:1;min-width:120px">
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <button onclick="setFolDatum(7)" style="background:none;border:1px solid var(--b2);color:var(--t3);padding:3px 8px;border-radius:2px;cursor:pointer;font-size:9px;font-family:'IBM Plex Mono',monospace" onmouseover="this.style.borderColor='var(--acc)';this.style.color='var(--acc)'" onmouseout="this.style.borderColor='var(--b2)';this.style.color='var(--t3)'">+1 week</button>
+          <button onclick="setFolDatum(14)" style="background:none;border:1px solid var(--b2);color:var(--t3);padding:3px 8px;border-radius:2px;cursor:pointer;font-size:9px;font-family:'IBM Plex Mono',monospace" onmouseover="this.style.borderColor='var(--acc)';this.style.color='var(--acc)'" onmouseout="this.style.borderColor='var(--b2)';this.style.color='var(--t3)'">+2 weken</button>
+          <button onclick="setFolDatum(30)" style="background:none;border:1px solid var(--b2);color:var(--t3);padding:3px 8px;border-radius:2px;cursor:pointer;font-size:9px;font-family:'IBM Plex Mono',monospace" onmouseover="this.style.borderColor='var(--acc)';this.style.color='var(--acc)'" onmouseout="this.style.borderColor='var(--b2)';this.style.color='var(--t3)'">+1 maand</button>
+          <button onclick="setFolDatum(42)" style="background:none;border:1px solid var(--b2);color:var(--t3);padding:3px 8px;border-radius:2px;cursor:pointer;font-size:9px;font-family:'IBM Plex Mono',monospace" onmouseover="this.style.borderColor='var(--acc)';this.style.color='var(--acc)'" onmouseout="this.style.borderColor='var(--b2)';this.style.color='var(--t3)'">+6 weken</button>
+        </div>
       </div>`;
   }else if(mode==='nieuw'){
     document.getElementById('mttl').textContent='＋ Nieuw bedrijf / contact';
@@ -1139,6 +1167,10 @@ function mSetF(f){
   document.querySelectorAll('#mfg button').forEach(b=>{const on=b.dataset.f===f;b.style.background=on?FH[f]:'transparent';b.style.color=on?fTxt(FH[f]):FH[f]});
   document.getElementById('mfg').dataset.sel=f;
 }
+function setFolDatum(dagen){
+  const d=document.getElementById('mfol-dl');
+  if(d)d.value=ad(dagen);
+}
 
 async function modalOk(){
   document.getElementById('mok').disabled=true;
@@ -1151,10 +1183,21 @@ async function modalOk(){
     }else if(mMode==='gesproken'||mMode==='email'){
       const note=(document.getElementById('mnote')?.value||'').trim();
       const nf=document.getElementById('mfg')?.dataset?.sel;
+      const folDl=document.getElementById('mfol-dl')?.value||'';
+      const folTxt=(document.getElementById('mfol-txt')?.value||'').trim()||`Opvolgen — ${getC(mBid)?.naam||''}`;
       const p=mPid&&getC(mBid)?getP(getC(mBid),mPid):null;
       if(note)await logIx(mBid,mPid,td(),note,'');
       if(nf&&nf!==p?.status)await setPSt(mBid,mPid,nf);
-      toast('Opgeslagen');closeM();
+      if(folDl){
+        const nid=Date.now().toString();
+        await shApp('Acties!A:G',[[nid,mBid,mPid||'',folTxt,folDl,'0',td()]]);
+        AC.push({id:nid,bedrijf_id:mBid,persoon_id:mPid||'',omschrijving:folTxt,deadline:folDl,gedaan:false,aangemaakt:td()});
+        bBadges();document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan).length;
+        toast(`Opgeslagen + actie op ${folDl}`);
+      } else {
+        toast('Opgeslagen');
+      }
+      closeM();
     }else if(mMode==='nieuw'){await addBedrijf();return}
     else if(mMode==='persoon'){await addPersoon(mBid);return}
   }catch(e){toast('Fout: '+e.message)}
@@ -1434,6 +1477,42 @@ async function addAGlobaal(){
     setActF('a');
     toast('Actie toegevoegd');
   }catch(e){toast('Fout: '+e.message)}
+}
+
+async function hardRefresh(){
+  const btn=document.getElementById('refresh-btn');
+  if(btn){btn.textContent='↺...';btn.disabled=true;}
+  setSS('busy','⬤ laden');
+  COMPANIES.length=0;AC.length=0;
+  const loader=document.getElementById('d-loading');
+  const content=document.getElementById('d-content');
+  if(loader)loader.style.display='flex';
+  if(content)content.style.display='none';
+  try{
+    const [cData,ixData,acData]=await Promise.all([
+      shGet('Contacten!A2:M'),shGet('Interacties!A2:E'),shGet('Acties!A2:G')
+    ]);
+    const contactRows=(cData.values||[]).filter(r=>r[0]);
+    const ixRows=(ixData.values||[]).filter(r=>r[0]);
+    sheetsNaarCompanies(contactRows,ixRows).forEach(c=>COMPANIES.push(c));
+    AC=(acData.values||[]).filter(r=>r[0]).map((r,ix)=>({
+      row:ix+2,id:r[0],bedrijf_id:r[1]||'',persoon_id:r[2]||'',
+      omschrijving:r[3]||'',deadline:r[4]||'',gedaan:r[5]==='1',aangemaakt:r[6]||''
+    }));
+    bBadges();populateSoortPills();
+    document.getElementById('bc').textContent=COMPANIES.filter(c=>!c.archief).length;
+    document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan).length;
+    document.getElementById('bk').textContent=COMPANIES.filter(c=>!c.soort).length;
+    const nu2=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+    const ll2=document.getElementById('last-load');if(ll2)ll2.textContent=nu2;
+    setSS('ok','⬤ live');
+    if(curTab==='d')rDash();
+    if(curTab==='c')rl();
+    if(curTab==='a')renderAc();
+    if(curTab==='k')renderK();
+    toast('Herladen op '+nu2+' ✓');
+  }catch(e){setSS('err','⬤ offline');toast('Laden mislukt: '+e.message);}
+  if(btn){btn.textContent='↺ ververs';btn.disabled=false;}
 }
 
 // ── START ──────────────────────────────────────────────────────────────────
