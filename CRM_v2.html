@@ -409,6 +409,11 @@ select:focus{border-color:var(--acc)}
   <div id="av">
     <div class="vt">Acties</div>
     <div class="vs">Open taken gesorteerd op deadline</div>
+    <div style="display:flex;gap:7px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <input class="inp" id="nav-txt" placeholder="nieuwe actie..." style="flex:1;min-width:160px">
+      <input class="inp" id="nav-dl" type="date" style="width:130px;color-scheme:dark">
+      <button class="btn" onclick="addAGlobaal()">＋ toevoegen</button>
+    </div>
     <div class="pts">
       <button class="pt"    id="pt-e" onclick="setActF('e')">verlopen</button>
       <button class="pt"    id="pt-v" onclick="setActF('v')">vandaag</button>
@@ -505,7 +510,7 @@ const SCAT  = {
 let COMPANIES = [];
 let AC = [];
 let selId=null, selPid=null, curTab='d', fABCD='Alle', fSoort='Alle', afF='w';
-let mMode='', mBid=null, mPid=null;
+let mMode='', mBid=null, mPid=null, fromActies=false;
 let tok=null, tokExp=0;
 
 // ── HELPERS ──────────────────────────────────────────────────────────────
@@ -807,6 +812,11 @@ function rDet(bid){
   const p=getP(c,selPid)||c.personen[0];
 
   document.getElementById('dc').innerHTML=`
+    ${fromActies?`<div style="padding:0 0 12px 0">
+      <button onclick="fromActies=false;setTab('a')" style="background:none;border:none;color:var(--acc);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:0;display:flex;align-items:center;gap:5px">
+        ← terug naar acties
+      </button>
+    </div>`:''}
     <div class="dh">
       <div class="dav" style="background:${col}">${avL(c.naam||p?.naam)}</div>
       <div style="flex:1;min-width:0">
@@ -1059,7 +1069,16 @@ async function togA(aid,bid){
   const a=AC.find(x=>x.id===aid);if(!a)return;a.gedaan=!a.gedaan;
   try{const d=await shGet('Acties!A:A');const ri=(d.values||[]).findIndex(r=>r[0]===aid);if(ri>0)await shPut(`Acties!F${ri+1}`,[[a.gedaan?'1':'0']])}catch(e){console.warn(e)}
   bBadges();document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan).length;
-  if(selId===bid)rDet(bid);if(curTab==='a')renderAc();
+  if(selId===bid)rDet(bid);
+  if(curTab==='a'){
+    // Verwijder de kaart direct uit de DOM als hij afgevinkt wordt (niet bij heropenen in 'g' filter)
+    if(a.gedaan&&afF!=='g'){
+      const el=document.querySelector(`[data-acid="${aid}"]`);
+      if(el){el.style.transition='opacity .2s';el.style.opacity='0';setTimeout(()=>el.remove(),200);}
+    } else {
+      renderAc();
+    }
+  }
 }
 
 // ── ARCHIEF ───────────────────────────────────────────────────────────────
@@ -1199,7 +1218,7 @@ function renderAc(){
     let dlCls='ok',dlTxt=a.deadline||'geen deadline';
     if(a.deadline){if(a.deadline<tn)dlCls='oud';else if(a.deadline===tn)dlCls='vd';}
     const faseCol=FH[p?.status||c?.status||'Nieuw']||'#666';
-    return`<div class="ac-kaart${a.gedaan?' x':''}">
+    return`<div class="ac-kaart${a.gedaan?' x':''}" data-acid="${a.id}">
       <div class="ac-left">
         <div class="chk${a.gedaan?' on':''}" onclick="togA('${a.id}','${a.bedrijf_id}')" title="${a.gedaan?'Heropenen':'Afvinken'}">${a.gedaan?'✓':''}</div>
         ${a.deadline?`<div class="dl ${dlCls}" style="writing-mode:initial;text-align:center">${a.deadline.slice(5)}</div>`:''}
@@ -1213,7 +1232,7 @@ function renderAc(){
         </div>
       </div>
       <div class="ac-right">
-        ${c?`<button class="open-btn" onclick="setTab('c');setTimeout(()=>sel('${c.id}'),50)">open →</button>`:''}
+        ${c?`<button class="open-btn" onclick="fromActies=true;setTab('c');setTimeout(()=>sel('${c.id}'),50)">open →</button>`:''}
       </div>
     </div>`;
   }).join('');
@@ -1389,6 +1408,23 @@ function updMobNav(){
     backBtn.style.opacity=showBack?'1':'0.3';
     backBtn.style.pointerEvents=showBack?'auto':'none';
   }
+}
+
+async function addAGlobaal(){
+  const txt=document.getElementById('nav-txt')?.value.trim();
+  if(!txt){toast('Vul een omschrijving in');return}
+  const dl=document.getElementById('nav-dl')?.value||'';
+  const nid=Date.now().toString();
+  try{
+    await shApp('Acties!A:G',[[nid,'','',''+txt,dl,'0',td()]]);
+    AC.push({id:nid,bedrijf_id:'',persoon_id:'',omschrijving:txt,deadline:dl,gedaan:false,aangemaakt:td()});
+    bBadges();
+    document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan).length;
+    document.getElementById('nav-txt').value='';
+    document.getElementById('nav-dl').value='';
+    setActF('a');
+    toast('Actie toegevoegd');
+  }catch(e){toast('Fout: '+e.message)}
 }
 
 // ── START ──────────────────────────────────────────────────────────────────
