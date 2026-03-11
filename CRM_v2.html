@@ -434,7 +434,7 @@ select:focus{border-color:var(--acc)}
       <button class="bg" onclick="selAll(false)">✗ geen</button>
       <select id="bulk-soort" class="inp" style="width:160px;color:var(--t)">
         <option value="">kies categorie...</option>
-        <option>Headhunter</option><option>Bedrijf</option><option>Prive</option>
+        <option>Headhunter</option><option>Bedrijf</option>
         <option>Relatie</option><option>Private Equity</option><option>Interim</option>
         <option>Jobsite</option><option>MBI</option><option>Overig</option>
       </select>
@@ -852,7 +852,7 @@ function rDet(bid){
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <select class="inp" style="width:180px;color:var(--t)" onchange="saveSoort('${bid}',this.value)">
           <option value="">— kies categorie —</option>
-          ${['Headhunter','Bedrijf','Prive','Relatie','Private Equity','Interim','Jobsite','MBI','Overig'].map(s=>`<option${c.soort===s?' selected':''}>${s}</option>`).join('')}
+          ${['Headhunter','Bedrijf','Relatie','Private Equity','Interim','Jobsite','MBI','Overig'].map(s=>`<option${c.soort===s?' selected':''}>${s}</option>`).join('')}
         </select>
         <span class="ss" id="sss-${bid}"></span>
       </div>
@@ -1148,7 +1148,7 @@ function openM(mode,bid,pid){
       <div class="mlbl">bedrijf</div><input class="inp" id="ncb3" placeholder="bedrijfsnaam" style="margin-bottom:9px;width:100%">
       <div class="mrow"><div><div class="mlbl">contactpersoon</div><input class="inp" id="ncp" placeholder="naam"></div>
       <div><div class="mlbl">categorie</div><select class="inp" id="ncs" style="color:var(--t)">
-        ${['Headhunter','Bedrijf','Prive','Relatie','Private Equity','Interim','Jobsite'].map(s=>`<option>${s}</option>`).join('')}
+        ${['Headhunter','Bedrijf','Relatie','Private Equity','Interim','Jobsite'].map(s=>`<option>${s}</option>`).join('')}
       </select></div></div>
       <div class="mrow"><div><div class="mlbl">e-mail</div><input class="inp" id="nce" type="email"></div>
       <div><div class="mlbl">telefoon</div><input class="inp" id="nct"></div></div>
@@ -1293,7 +1293,7 @@ function renderK(){
       </div>
       <select class="inp" style="width:140px;color:var(--t);font-size:10px" onchange="setSoort1('${c.id}',this.value)">
         <option value="">— categorie —</option>
-        <option>Headhunter</option><option>Bedrijf</option><option>Prive</option>
+        <option>Headhunter</option><option>Bedrijf</option>
         <option>Relatie</option><option>Private Equity</option><option>Interim</option>
         <option>Jobsite</option><option>MBI</option><option>Overig</option>
       </select>
