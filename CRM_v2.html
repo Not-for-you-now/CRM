@@ -575,7 +575,8 @@ function sheetsNaarCompanies(contactRows,ixRows){
     if(r[12]==='1')c.archief=true;
     c.personen.push({id:r[0],naam:r[2],email:r[4]||'',tel:r[5]||'',
       link:r[6]||'',status:r[7]||'Nieuw',abcd:r[10]||'C',
-      laatste_contact:r[8]||'',notes:r[9]||'',interacties:[]});
+      laatste_contact:r[8]||'',notes:r[9]||'',interacties:[],
+      vertrokken:(r[2]||'').startsWith('[V] ')});
   }
   const ixByPersoon={};
   for(const r of ixRows){if(!ixByPersoon[r[1]])ixByPersoon[r[1]]=[];ixByPersoon[r[1]].push({datum:r[2],note:r[3],herinnering:r[4]||''})}
@@ -661,7 +662,7 @@ function populateSoortPills(){
 function isMob(){return window.innerWidth<=768}
 function setTab(t){
   curTab=t;
-  ['d','c','a','k'].forEach(x=>{const el=document.getElementById('tab-'+x);if(el)el.classList.toggle('on',x===t)});
+  ['d','c','a','k','ov'].forEach(x=>{const el=document.getElementById('tab-'+x);if(el)el.classList.toggle('on',x===t)});
   if(isMob()){
     // Op mobiel: active class bepaalt zichtbaarheid
     document.getElementById('dv').classList.toggle('active',t==='d');
@@ -688,10 +689,13 @@ function setTab(t){
     document.getElementById('av').style.flexDirection=t==='a'?'column':'';
     document.getElementById('kv').style.display   =t==='k'?'flex':'none';
     document.getElementById('kv').style.flexDirection=t==='k'?'column':'';
+    document.getElementById('ovv').style.display  =t==='ov'?'flex':'none';
+    document.getElementById('ovv').style.flexDirection=t==='ov'?'column':'';
   }
   if(t==='c'){rl();if(!selId){document.getElementById('de').style.display='';document.getElementById('dc').style.display='none'}}
   if(t==='a')renderAc();
   if(t==='k')renderK();
+  if(t==='ov')renderOv();
   if(t==='d')rDash();
   updMobNav();
 }
@@ -805,7 +809,8 @@ function browH(c){
 }
 
 // ── SELECT + DETAIL ───────────────────────────────────────────────────────
-function sel(bid){
+function sel(bid,vanDash){
+  if(vanDash)fromDash=true;
   selId=bid;selPid=null;
   document.querySelectorAll('.brow').forEach(el=>el.classList.toggle('on',el.id==='row-'+bid));
   document.getElementById('de').style.display='none';
@@ -1589,6 +1594,55 @@ function rDashAct(){
     </div>`;
   });
   el.innerHTML=h;
+}
+
+async function markVertrokken(bid,pid){
+  const c=getC(bid),p=getP(c,pid);if(!c||!p)return;
+  p.vertrokken=!p.vertrokken;
+  const huidigeNaam=(p.naam||'').replace('[V] ','');
+  const nieuweNaam=p.vertrokken?'[V] '+huidigeNaam:huidigeNaam;
+  p.naam=nieuweNaam;
+  try{
+    const d=await shGet('Contacten!A:A');
+    const ri=(d.values||[]).findIndex(r=>r[0]===pid);
+    if(ri>0)await shPut('Contacten!C'+(ri+1),[[nieuweNaam]]);
+    toast(p.vertrokken?huidigeNaam+' gemarkeerd als vertrokken':huidigeNaam+' weer actief');
+    rDet(bid);
+  }catch(e){toast('Fout: '+e.message);}
+}
+
+function renderOv(){
+  const q=(document.getElementById('ov-q')?.value||'').toLowerCase();
+  const sort=document.getElementById('ov-sort')?.value||'lc-oud';
+  let L=COMPANIES.filter(c=>!c.archief);
+  if(q)L=L.filter(c=>(c.naam||'').toLowerCase().includes(q)||(c.soort||'').toLowerCase().includes(q)||c.personen.some(p=>(p.naam||'').toLowerCase().includes(q)));
+  if(sort==='lc-oud')L.sort((a,b)=>(a.laatste_contact||'9999').localeCompare(b.laatste_contact||'9999'));
+  else if(sort==='lc-nieuw')L.sort((a,b)=>(b.laatste_contact||'').localeCompare(a.laatste_contact||''));
+  else if(sort==='naam')L.sort((a,b)=>(a.naam||'').localeCompare(b.naam||''));
+  else if(sort==='soort')L.sort((a,b)=>(a.soort||'').localeCompare(b.soort||''));
+  const tbl=document.getElementById('ov-tbl');if(!tbl)return;
+  const thS='padding:8px 10px;text-align:left;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);border-bottom:2px solid var(--b);position:sticky;top:0;background:var(--bg1);white-space:nowrap';
+  const tdS='padding:7px 10px;border-bottom:1px solid var(--b);vertical-align:top';
+  tbl.innerHTML=`<thead><tr>
+    <th style="${thS}">Soort</th><th style="${thS}">Bedrijf</th>
+    <th style="${thS}">Contactpersoon</th><th style="${thS}">Laatste contact</th>
+    <th style="${thS}">Laatste interactie</th>
+  </tr></thead><tbody>${L.map(c=>{
+    const actieveP=c.personen.filter(p=>!(p.naam||'').startsWith('[V] ')&&!p.vertrokken);
+    const namen=actieveP.map(p=>esc(p.naam||'')).filter(Boolean).join(', ')||'—';
+    const lc=c.laatste_contact?new Date(c.laatste_contact+'T12:00:00').toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}):'—';
+    const lcK=lcC(c.laatste_contact);
+    let lNote='—',lDatum='';
+    c.personen.forEach(p=>p.interacties.forEach(ix=>{if(!lDatum||(ix.datum||'')>lDatum){lDatum=ix.datum;lNote=ix.note||'—';}}));
+    const col=sCol(c.soort);
+    return `<tr style="cursor:pointer" onclick="setTab('c');rl();setTimeout(()=>sel('${c.id}',true),80)" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+      <td style="${tdS}"><span style="font-size:9px;color:${col};border:1px solid ${col}44;padding:2px 6px;border-radius:2px;white-space:nowrap">${esc(c.soort||'—')}</span></td>
+      <td style="${tdS};font-weight:600">${esc(c.naam||'')}</td>
+      <td style="${tdS};color:var(--t2)">${namen}</td>
+      <td style="${tdS};color:${lcK};white-space:nowrap">${lc}</td>
+      <td style="${tdS};color:var(--t2);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(lNote)}">${esc(lNote.slice(0,80))}</td>
+    </tr>`;
+  }).join('')}</tbody>`;
 }
 
 // ── START ──────────────────────────────────────────────────────────────────
