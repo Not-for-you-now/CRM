@@ -335,6 +335,7 @@ select:focus{border-color:var(--acc)}
   <div class="tab"    id="tab-c" onclick="setTab('c')">Bedrijven <span class="tbadge" id="bc">—</span></div>
   <div class="tab"    id="tab-a" onclick="setTab('a')">Acties    <span class="tbadge" id="ba">—</span></div>
   <div class="tab"    id="tab-k" onclick="setTab('k')">Opschonen <span class="tbadge" id="bk">—</span></div>
+  <div class="tab"    id="tab-ov" onclick="setTab('ov')">Overzicht</div>
   <div id="tbr">
     <div id="tbdate"></div>
     <div id="last-load" style="font-size:9px;color:var(--t3);white-space:nowrap"></div>
@@ -409,6 +410,23 @@ select:focus{border-color:var(--acc)}
     <div id="back-btn" style="display:none;align-items:center;gap:8px;padding:14px 16px 0;cursor:pointer;color:var(--t2);font-size:11px" onclick="mobileBack()">← terug naar lijst</div>
     <div id="de"><div class="big">◎</div><div class="lbl">selecteer een bedrijf</div></div>
     <div id="dc"></div>
+  </div>
+
+  <!-- OVERZICHT -->
+  <div id="ovv" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+    <div style="padding:10px 16px;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;flex-shrink:0">overzicht</span>
+      <input id="ov-q" placeholder="zoek..." oninput="renderOv()" style="padding:5px 10px;background:var(--bg2);border:1px solid var(--b2);border-radius:var(--radius);color:var(--t);font-family:'IBM Plex Mono',monospace;font-size:11px;width:150px">
+      <select id="ov-sort" onchange="renderOv()" style="padding:5px 8px;background:var(--bg2);border:1px solid var(--b2);border-radius:var(--radius);color:var(--t);font-family:'IBM Plex Mono',monospace;font-size:11px">
+        <option value="lc-oud">oudste contact eerst</option>
+        <option value="lc-nieuw">nieuwste contact eerst</option>
+        <option value="naam">naam A→Z</option>
+        <option value="soort">soort</option>
+      </select>
+    </div>
+    <div style="overflow-y:auto;flex:1">
+      <table id="ov-tbl" style="width:100%;border-collapse:collapse;font-size:11px;color:var(--t)"></table>
+    </div>
   </div>
 
   <!-- ACTIES -->
@@ -533,7 +551,7 @@ const getP = (c,pid)=>c?.personen.find(p=>p.id===pid);
 const fTxt = col=>{const c=(col||'').replace('#','');if(c.length===6){const r=parseInt(c.slice(0,2),16),g=parseInt(c.slice(2,4),16),b=parseInt(c.slice(4,6),16);return(0.299*r+0.587*g+0.114*b)/255>0.5?'#0d0d0d':'#ffffff';}return'#ffffff'};
 
 let AB={};
-function bBadges(){AB={};AC.forEach(a=>{if(!a.gedaan)AB[a.bedrijf_id]=(AB[a.bedrijf_id]||0)+1})}
+function bBadges(){AB={};const actBids=new Set(COMPANIES.filter(c=>!c.archief).map(c=>c.id));AC.forEach(a=>{if(!a.gedaan&&actBids.has(a.bedrijf_id))AB[a.bedrijf_id]=(AB[a.bedrijf_id]||0)+1})}
 
 // ── AUTH ─────────────────────────────────────────────────────────────────
 function b64u(s){return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'')}
@@ -612,7 +630,7 @@ async function init(){
     bBadges();
     populateSoortPills();
     document.getElementById('bc').textContent=COMPANIES.filter(c=>!c.archief).length;
-    document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan).length;
+    document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan&&new Set(COMPANIES.filter(c=>!c.archief).map(c=>c.id)).has(a.bedrijf_id)).length;
     document.getElementById('bk').textContent=COMPANIES.filter(c=>!c.soort).length;
     // Altijd dashboard tekenen na laden, ook als andere tab actief is
     rDash();
@@ -1101,7 +1119,7 @@ async function addA(bid,pid){
 async function togA(aid,bid){
   const a=AC.find(x=>x.id===aid);if(!a)return;a.gedaan=!a.gedaan;
   try{const d=await shGet('Acties!A:A');const ri=(d.values||[]).findIndex(r=>r[0]===aid);if(ri>0)await shPut(`Acties!F${ri+1}`,[[a.gedaan?'1':'0']])}catch(e){console.warn(e)}
-  bBadges();document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan).length;
+  bBadges();document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan&&new Set(COMPANIES.filter(c=>!c.archief).map(c=>c.id)).has(a.bedrijf_id)).length;
   if(selId===bid)rDet(bid);
   if(curTab==='a'){
     // Verwijder de kaart direct uit de DOM als hij afgevinkt wordt (niet bij heropenen in 'g' filter)
@@ -1216,7 +1234,7 @@ async function modalOk(){
         const nid=Date.now().toString();
         await shApp('Acties!A:G',[[nid,mBid,mPid||'',folTxt,folDl,'0',td()]]);
         AC.push({id:nid,bedrijf_id:mBid,persoon_id:mPid||'',omschrijving:folTxt,deadline:folDl,gedaan:false,aangemaakt:td()});
-        bBadges();document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan).length;
+        bBadges();document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan&&new Set(COMPANIES.filter(c=>!c.archief).map(c=>c.id)).has(a.bedrijf_id)).length;
         toast(`Opgeslagen + actie op ${folDl}`);
       } else {
         toast('Opgeslagen');
@@ -1361,7 +1379,7 @@ function rDash(){
 
   // Stats
   const opvolgen=actief.filter(c=>c.status==='Opvolgen'||c.status==='In afwachting').length;
-  const openAc=AC.filter(a=>!a.gedaan).length;
+  const openAc=AC.filter(a=>!a.gedaan&&new Set(COMPANIES.filter(c=>!c.archief).map(c=>c.id)).has(a.bedrijf_id)).length;
   const wkIx=COMPANIES.flatMap(c=>c.personen.flatMap(p=>p.interacties)).filter(i=>i.datum&&i.datum>=wk7).length;
   const tbVandaag=actief.filter(c=>c.personen.some(p=>p.interacties.some(i=>i.datum&&i.datum.startsWith(t)&&/terugbel/i.test(i.note||'')))).length;
 
@@ -1496,7 +1514,7 @@ async function addAGlobaal(){
     await shApp('Acties!A:G',[[nid,'','',''+txt,dl,'0',td()]]);
     AC.push({id:nid,bedrijf_id:'',persoon_id:'',omschrijving:txt,deadline:dl,gedaan:false,aangemaakt:td()});
     bBadges();
-    document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan).length;
+    document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan&&new Set(COMPANIES.filter(c=>!c.archief).map(c=>c.id)).has(a.bedrijf_id)).length;
     document.getElementById('nav-txt').value='';
     document.getElementById('nav-dl').value='';
     setActF('a');
@@ -1526,7 +1544,7 @@ async function hardRefresh(){
     }));
     bBadges();populateSoortPills();
     document.getElementById('bc').textContent=COMPANIES.filter(c=>!c.archief).length;
-    document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan).length;
+    document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan&&new Set(COMPANIES.filter(c=>!c.archief).map(c=>c.id)).has(a.bedrijf_id)).length;
     document.getElementById('bk').textContent=COMPANIES.filter(c=>!c.soort).length;
     const nu2=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
     const ll2=document.getElementById('last-load');if(ll2)ll2.textContent=nu2;
@@ -1547,7 +1565,7 @@ function refreshViews(bid){
   if(curTab==='a')renderAc();
   if(curTab==='k')renderK();
   document.getElementById('bc').textContent=COMPANIES.filter(c=>!c.archief).length;
-  document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan).length;
+  document.getElementById('ba').textContent=AC.filter(a=>!a.gedaan&&new Set(COMPANIES.filter(c=>!c.archief).map(c=>c.id)).has(a.bedrijf_id)).length;
   document.getElementById('bk').textContent=COMPANIES.filter(c=>!c.soort).length;
 }
 
